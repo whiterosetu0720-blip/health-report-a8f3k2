@@ -1,0 +1,59 @@
+name: Generate Health Report
+
+on:
+  repository_dispatch:
+    types: [generate-report]
+
+permissions:
+  contents: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Generate report image
+        run: node scripts/generate-report.js
+        env:
+          SLEEP_LABEL:  ${{ github.event.client_payload.sleep_label }}
+          RELAX_LABEL:  ${{ github.event.client_payload.relax_label }}
+          RELAX_RATE:   ${{ github.event.client_payload.relax_rate }}
+          OVER_LABEL:   ${{ github.event.client_payload.over_label }}
+          OVER_DAYS:    ${{ github.event.client_payload.over_days }}
+          PERIOD:       ${{ github.event.client_payload.period }}
+
+      - name: Commit report.png
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add report.png
+          git commit -m "Update report" || echo "No changes"
+          git push
+
+      - name: Wait for CDN propagation
+        run: sleep 10
+
+      - name: Send LINE image message
+        run: node scripts/send-line.js
+        env:
+          LINE_TOKEN:   ${{ secrets.LINE_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+
+      - name: Notify failure via LINE
+        if: failure()
+        run: |
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Authorization: Bearer ${{ secrets.LINE_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"to\":\"${{ secrets.LINE_USER_ID }}\",\"messages\":[{\"type\":\"text\",\"text\":\"週次レポートの生成に失敗しました。GitHub Actionsのログを確認してください。\"}]}"
