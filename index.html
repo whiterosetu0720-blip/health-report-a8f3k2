@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>体調レポート｜ヘルスジャーナル型</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+    body { font-family: 'BIZ UDGothic', 'Noto Sans JP', sans-serif; }
+
+    /* ── 信号機 大（総評ヘッダー用） ─────────────────── */
+    .signal-wrap-lg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      background: #1c1c1c;
+      border-radius: 999px;
+      padding: 14px 12px;
+      box-shadow: 2px 4px 12px rgba(0,0,0,0.4), inset 0 1px 3px rgba(255,255,255,0.05);
+    }
+    .signal-dot-lg {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── 信号機 小（各項目用） ────────────────────────── */
+    .signal-wrap-sm {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: #1c1c1c;
+      border-radius: 999px;
+      padding: 8px 6px;
+      box-shadow: 2px 4px 12px rgba(0,0,0,0.4), inset 0 1px 3px rgba(255,255,255,0.05);
+    }
+    .signal-dot-sm {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+    }
+
+    /* ── 点灯 ─────────────────────────────────────────── */
+    .s-green  { background: #22c55e; box-shadow: 0 0 8px #22c55e, 0 0 16px rgba(34,197,94,0.4); }
+    .s-yellow { background: #fbbf24; box-shadow: 0 0 8px #fbbf24, 0 0 16px rgba(251,191,36,0.4); }
+    .s-red    { background: #ef4444; box-shadow: 0 0 8px #ef4444, 0 0 16px rgba(239,68,68,0.4); }
+
+    /* ── 消灯（各色が識別できる輝度に調整） ─────────── */
+    .s-off-r { background: #4a1515; }
+    .s-off-y { background: #3d3000; }
+    .s-off-g { background: #0a2e18; }
+
+    /* ── 区切り線 ─────────────────────────────────────── */
+    .section-divider {
+      border: none;
+      border-top: 1px dashed #e5e7eb;
+      margin: 0;
+    }
+
+    /* ── レポートカード上部ボーダー ──────────────────── */
+    .report-card {
+      border-top: 6px solid #78716c;
+    }
+
+    /* ── 印刷設定 ─────────────────────────────────────── */
+    @page {
+      size: A4 portrait;
+      margin: 10mm 12mm;
+    }
+
+    @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      body {
+        background: white !important;
+      }
+      .max-w-xl {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .shadow-lg {
+        box-shadow: none !important;
+        border: 1px solid #ccc;
+      }
+      /* グロー効果は印刷不要（背景色は print-color-adjust で維持） */
+      .s-green, .s-yellow, .s-red {
+        box-shadow: none !important;
+      }
+      /* ページ内改行を防ぐ */
+      section, article {
+        page-break-inside: avoid;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-amber-50 min-h-screen">
+
+  <!-- SVGアイコン共通定義（チェック・バツを使い回す） -->
+  <svg style="display:none" aria-hidden="true">
+    <defs>
+      <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+              stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 13l4 4L19 7"/>
+      </symbol>
+      <symbol id="icon-cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+              stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 18L18 6M6 6l12 12"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="max-w-xl mx-auto py-10 px-4">
+    <article class="bg-white shadow-lg rounded-none report-card"
+             data-period-start="2026-04-06"
+             data-period-end="2026-04-12">
+
+      <!-- ── ヘッダー ─────────────────────────────────── -->
+      <header class="px-8 pt-8 pb-6 border-b border-stone-200">
+        <p class="text-stone-400 text-xs tracking-widest uppercase mb-1">Personal Health Journal</p>
+        <h1 class="text-2xl font-bold text-stone-800 tracking-tight">体調レポート</h1>
+        <time datetime="2026-04-06/2026-04-12"
+              class="block text-stone-500 text-sm mt-1">
+          2026年4月6日（月）〜 2026年4月12日（日）
+        </time>
+
+        <!-- 縦型大きめ信号機（総評）＋コメント -->
+        <div class="mt-5 flex items-start gap-5">
+          <div class="flex flex-col items-center flex-shrink-0">
+            <div class="signal-wrap-lg"
+                 role="img"
+                 aria-label="総評：注意（黄）">
+              <div class="signal-dot-lg s-off-r" aria-hidden="true"></div>
+              <div class="signal-dot-lg s-yellow" aria-hidden="true"></div>
+              <div class="signal-dot-lg s-off-g" aria-hidden="true"></div>
+            </div>
+            <p class="text-xs text-stone-400 font-medium mt-2">総評</p>
+            <p class="text-sm font-bold text-yellow-600">注意</p>
+          </div>
+          <div class="flex-1">
+            <h2 class="text-sm font-bold text-stone-700 mb-2 uppercase tracking-wider">総評コメント</h2>
+            <div class="bg-amber-50 border-l-4 border-amber-400 pl-4 py-3 rounded-r-lg">
+              <ul class="text-stone-600 text-sm leading-relaxed space-y-1.5">
+                <li class="flex items-start gap-2">
+                  <span class="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-green-100 border border-green-300 flex items-center justify-center">
+                    <svg class="w-2.5 h-2.5 text-green-600"><use href="#icon-check"/></svg>
+                  </span>
+                  <span>睡眠リズムは安定しています。この調子を維持してください。</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-yellow-100 border border-yellow-300 flex items-center justify-center">
+                    <svg class="w-2.5 h-2.5 text-yellow-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 9v4m0 4h.01"/></svg>
+                  </span>
+                  <span>リラックス方法の実施率が低下しています。週の後半も意識的に確保してください。</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-red-100 border border-red-300 flex items-center justify-center">
+                    <svg class="w-2.5 h-2.5 text-red-600"><use href="#icon-cross"/></svg>
+                  </span>
+                  <span>行動量が体力上限を超える日が続いており、疲労の蓄積が見込まれます。今週は活動量を控えめに調整することを推奨します。</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ── 各項目 ─────────────────────────────────────── -->
+      <main class="px-8 pt-10 pb-6">
+
+        <!-- 項目01：就寝・起床時刻 -->
+        <section aria-label="就寝・起床時刻の規則性">
+          <div class="flex items-start gap-5 py-5">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0 pt-1">
+              <span class="text-xs text-stone-400 font-medium mb-1">01</span>
+              <div class="signal-wrap-sm"
+                   role="img"
+                   aria-label="評価：良好（緑）">
+                <div class="signal-dot-sm s-off-r" aria-hidden="true"></div>
+                <div class="signal-dot-sm s-off-y" aria-hidden="true"></div>
+                <div class="signal-dot-sm s-green" aria-hidden="true"></div>
+              </div>
+            </div>
+            <div class="flex-1 pt-1">
+              <h3 class="text-base font-bold text-stone-700 mb-1">就寝・起床時刻の規則性</h3>
+              <p class="text-stone-500 text-sm leading-relaxed">
+                就寝 23:15、起床 7:00。直近7日間の平均と照合した結果、前後30分以内の誤差に収まっており安定しています。
+              </p>
+              <div class="mt-3 inline-block bg-green-50 border border-green-200 rounded-full px-3 py-0.5">
+                <span class="text-green-700 text-xs font-bold">良好</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <hr class="section-divider" />
+
+        <!-- 項目02：リラックス方法 -->
+        <section aria-label="リラックス方法の実施状況">
+          <div class="flex items-start gap-5 py-5">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0 pt-1">
+              <span class="text-xs text-stone-400 font-medium mb-1">02</span>
+              <div class="signal-wrap-sm"
+                   role="img"
+                   aria-label="評価：注意（黄）">
+                <div class="signal-dot-sm s-off-r" aria-hidden="true"></div>
+                <div class="signal-dot-sm s-yellow" aria-hidden="true"></div>
+                <div class="signal-dot-sm s-off-g" aria-hidden="true"></div>
+              </div>
+            </div>
+            <div class="flex-1 pt-1">
+              <h3 class="text-base font-bold text-stone-700 mb-1">リラックス方法の実施状況</h3>
+              <p class="text-stone-500 text-sm leading-relaxed">
+                直近7日中4日実施（実施率 57%）。木・土・日に未実施が見られます。
+              </p>
+              <!-- 週カレンダー -->
+              <ol class="mt-3 grid grid-cols-7 gap-1.5 max-w-xs list-none p-0"
+                  aria-label="週間実施カレンダー">
+                <li class="text-center" aria-label="月曜日：実施">
+                  <div class="text-xs text-stone-400 mb-1" aria-hidden="true">月</div>
+                  <div class="w-6 h-6 mx-auto rounded-full bg-green-500 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-white"><use href="#icon-check"/></svg>
+                  </div>
+                </li>
+                <li class="text-center" aria-label="火曜日：実施">
+                  <div class="text-xs text-stone-400 mb-1" aria-hidden="true">火</div>
+                  <div class="w-6 h-6 mx-auto rounded-full bg-green-500 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-white"><use href="#icon-check"/></svg>
+                  </div>
+                </li>
+                <li class="text-center" aria-label="水曜日：実施">
+                  <div class="text-xs text-stone-400 mb-1" aria-hidden="true">水</div>
+                  <div class="w-6 h-6 mx-auto rounded-full bg-green-500 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-white"><use href="#icon-check"/></svg>
+                  </div>
+                </li>
+                <li class="text-center" aria-label="木曜日：未実施">
+                  <div class="text-xs text-stone-400 mb-1" aria-hidden="true">木</div>
+                  <div class="w-6 h-6 mx-auto rounded-full bg-stone-200 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-stone-400"><use href="#icon-cross"/></svg>
+                  </div>
+                </li>
+                <li class="text-center" aria-label="金曜日：実施">
+                  <div class="text-xs text-stone-400 mb-1" aria-hidden="true">金</div>
+                  <div class="w-6 h-6 mx-auto rounded-full bg-green-500 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-white"><use href="#icon-check"/></svg>
+                  </div>
+                </li>
+                <li class="text-center" aria-label="土曜日：未実施">
+                  <div class="text-xs text-stone-400 mb-1" aria-hidden="true">土</div>
+                  <div class="w-6 h-6 mx-auto rounded-full bg-stone-200 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-stone-400"><use href="#icon-cross"/></svg>
+                  </div>
+                </li>
+                <li class="text-center" aria-label="日曜日：未実施">
+                  <div class="text-xs text-stone-400 mb-1" aria-hidden="true">日</div>
+                  <div class="w-6 h-6 mx-auto rounded-full bg-stone-200 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-stone-400"><use href="#icon-cross"/></svg>
+                  </div>
+                </li>
+              </ol>
+              <div class="mt-3 inline-block bg-yellow-50 border border-yellow-200 rounded-full px-3 py-0.5">
+                <span class="text-yellow-700 text-xs font-bold">注意</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <hr class="section-divider" />
+
+        <!-- 項目03：行動量と体力のバランス -->
+        <section aria-label="行動量と体力のバランス">
+          <div class="flex items-start gap-5 py-5">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0 pt-1">
+              <span class="text-xs text-stone-400 font-medium mb-1">03</span>
+              <div class="signal-wrap-sm"
+                   role="img"
+                   aria-label="評価：要対策（赤）">
+                <div class="signal-dot-sm s-red" aria-hidden="true"></div>
+                <div class="signal-dot-sm s-off-y" aria-hidden="true"></div>
+                <div class="signal-dot-sm s-off-g" aria-hidden="true"></div>
+              </div>
+            </div>
+            <div class="flex-1 pt-1">
+              <h3 class="text-base font-bold text-stone-700 mb-1">行動量と体力のバランス</h3>
+              <p class="text-stone-500 text-sm leading-relaxed">
+                直近3日間で体力上限を超えた日が2日ありました。翌日への疲労持ち越しが懸念されます。
+              </p>
+
+              <!--
+                バースケール: 最大値を120%として正規化
+                  85%  → 85/120 ≈ 70.8%
+                  110% → 110/120 ≈ 91.7%
+                  120% → 120/120 = 100%
+                点線縦ライン = 体力上限100% の位置（83.3%）
+              -->
+              <div class="mt-3 space-y-2 max-w-xs">
+                <!-- 木 -->
+                <div class="flex items-center gap-3 text-xs text-stone-500">
+                  <span class="w-4 text-right">木</span>
+                  <div class="relative flex-1 bg-stone-100 rounded-full h-2 overflow-visible">
+                    <div class="h-2 rounded-full bg-yellow-400" style="width: 70.8%"></div>
+                    <div class="absolute top-1/2 -translate-y-1/2 w-px h-3 bg-stone-400"
+                         style="left: 83.3%"
+                         title="体力上限（100%）"></div>
+                  </div>
+                  <span class="w-8 text-right">85%</span>
+                </div>
+                <!-- 金 -->
+                <div class="flex items-center gap-3 text-xs text-stone-500">
+                  <span class="w-4 text-right">金</span>
+                  <div class="relative flex-1 bg-stone-100 rounded-full h-2 overflow-visible">
+                    <div class="h-2 rounded-full bg-red-500" style="width: 91.7%"></div>
+                    <div class="absolute top-1/2 -translate-y-1/2 w-px h-3 bg-stone-400"
+                         style="left: 83.3%"
+                         title="体力上限（100%）"></div>
+                  </div>
+                  <span class="w-8 text-right text-red-600 font-bold">110%</span>
+                </div>
+                <!-- 土 -->
+                <div class="flex items-center gap-3 text-xs text-stone-500">
+                  <span class="w-4 text-right">土</span>
+                  <div class="relative flex-1 bg-stone-100 rounded-full h-2 overflow-visible">
+                    <div class="h-2 rounded-full bg-red-500" style="width: 100%"></div>
+                    <div class="absolute top-1/2 -translate-y-1/2 w-px h-3 bg-stone-400"
+                         style="left: 83.3%"
+                         title="体力上限（100%）"></div>
+                  </div>
+                  <span class="w-8 text-right text-red-600 font-bold">120%</span>
+                </div>
+                <!-- 凡例 -->
+                <p class="text-xs text-stone-400 mt-1">
+                  <span class="inline-block w-px h-3 bg-stone-400 align-middle mr-1"></span>縦線 = 体力上限（100%）
+                </p>
+              </div>
+
+              <div class="mt-3 inline-block bg-red-50 border border-red-200 rounded-full px-3 py-0.5">
+                <span class="text-red-700 text-xs font-bold">要対策</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+      <!-- ── フッター ────────────────────────────────────── -->
+      <footer class="px-8 py-4 bg-stone-50 border-t border-stone-200 flex items-center justify-between">
+        <time datetime="2026-04-06/2026-04-12" class="text-xs text-stone-400">
+          評価期間: 2026/04/06 〜 04/12
+        </time>
+        <div class="flex items-center gap-4 text-xs text-stone-400" aria-label="評価の凡例">
+          <span class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-green-500 inline-block" aria-hidden="true"></span>良好
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-yellow-400 inline-block" aria-hidden="true"></span>注意
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-red-500 inline-block" aria-hidden="true"></span>要対策
+          </span>
+        </div>
+      </footer>
+
+    </article>
+  </div>
+
+</body>
+</html>

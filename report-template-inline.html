@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>体調レポート</title>
+  <style>
+    /* ── リセット ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    ul, ol { list-style: none; }
+
+    /* ── ベース ─────────────────────────────────────── */
+    body {
+      font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
+                   'Yu Gothic UI', 'Yu Gothic', 'Meiryo', sans-serif;
+      background: #fef9ef;
+      width: 480px;
+      min-height: 640px;
+    }
+
+    /* ── カード ─────────────────────────────────────── */
+    .card {
+      width: 480px;
+      background: #ffffff;
+      border-top: 6px solid #78716c;
+    }
+
+    /* ── 信号機 大（総評用） ─────────────────────────── */
+    .signal-lg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      background: #1c1c1c;
+      border-radius: 999px;
+      padding: 10px 8px;
+      box-shadow: 2px 4px 12px rgba(0,0,0,0.4),
+                  inset 0 1px 3px rgba(255,255,255,0.05);
+    }
+    .dot-lg {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+    }
+
+    /* ── 信号機 小（各項目用） ───────────────────────── */
+    .signal-sm {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      background: #1c1c1c;
+      border-radius: 999px;
+      padding: 7px 5px;
+      box-shadow: 2px 4px 8px rgba(0,0,0,0.4),
+                  inset 0 1px 2px rgba(255,255,255,0.05);
+    }
+    .dot-sm {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+    }
+
+    /* ── ヘッダー ────────────────────────────────────── */
+    .header {
+      padding: 16px 20px 14px;
+      border-bottom: 1px solid #e7e5e4;
+    }
+    .subtitle {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #a8a29e;
+      margin-bottom: 3px;
+    }
+    .title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1c1917;
+      letter-spacing: -0.02em;
+    }
+    .period {
+      font-size: 11px;
+      color: #78716c;
+      margin-top: 2px;
+    }
+
+    /* ── 総評行 ─────────────────────────────────────── */
+    .overall-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .overall-signal-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .overall-meta {
+      text-align: center;
+      margin-top: 4px;
+    }
+    .overall-meta-label {
+      display: block;
+      font-size: 9px;
+      color: #a8a29e;
+      font-weight: 500;
+    }
+    .overall-meta-status {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 1px;
+    }
+
+    /* ── 総評コメント ────────────────────────────────── */
+    .comment-box {
+      flex: 1;
+    }
+    .comment-heading {
+      font-size: 9px;
+      font-weight: 700;
+      color: #57534e;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 5px;
+    }
+    .comment-inner {
+      background: #fffbeb;
+      border-left: 3px solid #fbbf24;
+      padding: 8px 10px;
+      border-radius: 0 5px 5px 0;
+    }
+    .comment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .comment-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      font-size: 10.5px;
+      color: #57534e;
+      line-height: 1.45;
+    }
+    .c-icon {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+    .c-icon-ryoko   { background: #dcfce7; border: 1px solid #86efac; }
+    .c-icon-chui    { background: #fef9c3; border: 1px solid #fde047; }
+    .c-icon-taisaku { background: #fee2e2; border: 1px solid #fca5a5; }
+
+    /* ── 各項目メイン ────────────────────────────────── */
+    .main {
+      padding: 8px 20px 6px;
+    }
+    .item-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 9px 0;
+    }
+    .item-num-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+    .item-num {
+      font-size: 9px;
+      color: #a8a29e;
+      font-weight: 500;
+    }
+    .item-content {
+      flex: 1;
+      padding-top: 2px;
+    }
+    .item-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #1c1917;
+      margin-bottom: 3px;
+    }
+    .item-desc {
+      font-size: 10.5px;
+      color: #78716c;
+      line-height: 1.45;
+    }
+    .item-sub {
+      font-size: 10.5px;
+      color: #78716c;
+      margin-top: 2px;
+    }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-top: 5px;
+    }
+    .badge-ryoko   { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+    .badge-chui    { background: #fefce8; border: 1px solid #fef08a; color: #a16207; }
+    .badge-taisaku { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+
+    /* ── 区切り線 ────────────────────────────────────── */
+    .divider {
+      border: none;
+      border-top: 1px dashed #e7e5e4;
+    }
+
+    /* ── フッター ────────────────────────────────────── */
+    .footer {
+      padding: 7px 20px;
+      background: #f5f5f4;
+      border-top: 1px solid #e7e5e4;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-period {
+      font-size: 9px;
+      color: #a8a29e;
+    }
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 9px;
+      color: #a8a29e;
+    }
+    .legend-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SVGアイコン共通定義 -->
+  <svg style="display:none" aria-hidden="true">
+    <defs>
+      <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 13l4 4L19 7"/>
+      </symbol>
+      <symbol id="ic-excl" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="3" stroke-linecap="round">
+        <path d="M12 9v4m0 4h.01"/>
+      </symbol>
+      <symbol id="ic-cross" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 18L18 6M6 6l12 12"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="card">
+
+    <!-- ── ヘッダー ─────────────────────────────────── -->
+    <div class="header">
+      <div class="subtitle">Personal Health Journal</div>
+      <div class="title">体調レポート</div>
+      <div class="period">{{PERIOD}}</div>
+
+      <!-- 縦型信号機（総評）＋コメント -->
+      <div class="overall-row">
+
+        <div class="overall-signal-col">
+          <div class="signal-lg">
+            <div class="dot-lg" style="background-color:{{OVERALL_R}};"></div>
+            <div class="dot-lg" style="background-color:{{OVERALL_Y}};"></div>
+            <div class="dot-lg" style="background-color:{{OVERALL_G}};"></div>
+          </div>
+          <div class="overall-meta">
+            <span class="overall-meta-label">総評</span>
+            <span class="overall-meta-status" style="color:{{OVERALL_COLOR}};">{{OVERALL_LABEL}}</span>
+          </div>
+        </div>
+
+        <div class="comment-box">
+          <div class="comment-heading">総評コメント</div>
+          <div class="comment-inner">
+            <ul class="comment-list">
+              <li class="comment-item">
+                {{COMMENT_SLEEP_ICON}}
+                <span>{{COMMENT_SLEEP}}</span>
+              </li>
+              <li class="comment-item">
+                {{COMMENT_RELAX_ICON}}
+                <span>{{COMMENT_RELAX}}</span>
+              </li>
+              <li class="comment-item">
+                {{COMMENT_OVER_ICON}}
+                <span>{{COMMENT_OVER}}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /header -->
+
+    <!-- ── 各評価項目 ────────────────────────────────── -->
+    <div class="main">
+
+      <!-- 01：就寝・起床時刻の規則性 -->
+      <div class="item-row">
+        <div class="item-num-col">
+          <span class="item-num">01</span>
+          <div class="signal-sm">
+            <div class="dot-sm" style="background-color:{{SLEEP_R}};"></div>
+            <div class="dot-sm" style="background-color:{{SLEEP_Y}};"></div>
+            <div class="dot-sm" style="background-color:{{SLEEP_G}};"></div>
+          </div>
+        </div>
+        <div class="item-content">
+          <div class="item-title">就寝・起床時刻の規則性</div>
+          <div class="item-desc">{{COMMENT_SLEEP}}</div>
+          <span class="badge badge-{{SLEEP_CLASS}}">{{SLEEP_LABEL}}</span>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- 02：リラックス方法の実施状況 -->
+      <div class="item-row">
+        <div class="item-num-col">
+          <span class="item-num">02</span>
+          <div class="signal-sm">
+            <div class="dot-sm" style="background-color:{{RELAX_R}};"></div>
+            <div class="dot-sm" style="background-color:{{RELAX_Y}};"></div>
+            <div class="dot-sm" style="background-color:{{RELAX_G}};"></div>
+          </div>
+        </div>
+        <div class="item-content">
+          <div class="item-title">リラックス方法の実施状況</div>
+          <div class="item-desc">{{COMMENT_RELAX}}</div>
+          <div class="item-sub">週間実施率：{{RELAX_RATE}}</div>
+          <span class="badge badge-{{RELAX_CLASS}}">{{RELAX_LABEL}}</span>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- 03：行動量と体力のバランス -->
+      <div class="item-row">
+        <div class="item-num-col">
+          <span class="item-num">03</span>
+          <div class="signal-sm">
+            <div class="dot-sm" style="background-color:{{OVER_R}};"></div>
+            <div class="dot-sm" style="background-color:{{OVER_Y}};"></div>
+            <div class="dot-sm" style="background-color:{{OVER_G}};"></div>
+          </div>
+        </div>
+        <div class="item-content">
+          <div class="item-title">行動量と体力のバランス</div>
+          <div class="item-desc">{{COMMENT_OVER}}</div>
+          <div class="item-sub">体力超過日数：{{OVER_DAYS}}日</div>
+          <span class="badge badge-{{OVER_CLASS}}">{{OVER_LABEL}}</span>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+
+    <!-- ── フッター ──────────────────────────────────── -->
+    <div class="footer">
+      <span class="footer-period">評価期間: {{PERIOD}}</span>
+      <div class="legend">
+        <span class="legend-item">
+          <span class="legend-dot" style="background:#22c55e;"></span>良好
+        </span>
+        <span class="legend-item">
+          <span class="legend-dot" style="background:#fbbf24;"></span>注意
+        </span>
+        <span class="legend-item">
+          <span class="legend-dot" style="background:#ef4444;"></span>要対策
+        </span>
+      </div>
+    </div>
+
+  </div><!-- /card -->
+
+</body>
+</html>

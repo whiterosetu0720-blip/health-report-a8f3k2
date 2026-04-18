@@ -1,0 +1,9 @@
+{
+  "name": "health-report",
+  "version": "1.0.0",
+  "description": "週次体調レポートを画像化してLINEに送る自動化ツール",
+  "private": true,
+  "dependencies": {
+    "playwright": "^1.43.0"
+  }
+}

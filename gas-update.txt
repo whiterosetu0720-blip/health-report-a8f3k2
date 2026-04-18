@@ -1,0 +1,62 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GAS の sendWeeklyReport を更新する手順
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+【STEP 5 作業】
+GASエディタで sendWeeklyReport 関数を開き、
+「LINE に送信している末尾の UrlFetchApp.fetch(...)」を
+以下のコードに丸ごと置き換えてください。
+
+────────────────────────────────────────
+■ ファイル先頭付近（既存の var LINE_TOKEN などの近く）に追加
+
+var GITHUB_TOKEN = 'ghp_XXXXXXXXXXXX';   // STEP 4 で発行したトークン
+var GITHUB_REPO  = 'YourName/YourRepo';  // 例: manami/health-report-a8f3k2
+
+────────────────────────────────────────
+■ sendWeeklyReport 末尾の UrlFetchApp.fetch を置き換え
+
+  // ---- LINE テキスト送信（旧コード・コメントアウト） ----
+  /*
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+    ... 既存のLINE送信コード ...
+  });
+  */
+
+  // ---- GitHub Actions を起動（新コード） ----
+  UrlFetchApp.fetch(
+    'https://api.github.com/repos/' + GITHUB_REPO + '/dispatches',
+    {
+      method: 'post',
+      headers: {
+        'Authorization': 'Bearer ' + GITHUB_TOKEN,
+        'Accept': 'application/vnd.github+json'
+      },
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        event_type: 'generate-report',
+        client_payload: {
+          sleep_label: sleepLabel,
+          relax_label: relaxLabel,
+          relax_rate:  String(relaxRate || 0),
+          over_label:  overLabel,
+          over_days:   String(overDays || 0),
+          period:      period
+        }
+      })
+    }
+  );
+  Logger.log('GitHub Actions にリクエストを送信しました。');
+
+────────────────────────────────────────
+■ 変数名の確認
+
+GASスクリプト内で使われている変数名が以下と一致しているか確認してください。
+  sleepLabel  … 睡眠評価 ( 'ryoko' / 'chui' / 'taisaku' )
+  relaxLabel  … リラックス評価
+  relaxRate   … リラックス実施率（数値 0〜100）
+  overLabel   … 行動量評価
+  overDays    … 体力超過日数（数値）
+  period      … 期間文字列（例: '4/14 〜 4/20'）
+
+異なる変数名を使っている場合はそちらに合わせて書き直してください。
