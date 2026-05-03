@@ -4,6 +4,7 @@
   "description": "週次体調レポートを画像化してLINEに送る自動化ツール",
   "private": true,
   "dependencies": {
+    "googleapis": "^144.0.0",
     "playwright": "^1.43.0"
   }
 }
