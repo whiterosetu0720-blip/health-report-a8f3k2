@@ -1,11 +1,8 @@
 name: Generate Health Report
 
 on:
-  # 毎週月曜 午前9時（JST）に自動実行 ※ GitHub Actions は UTC で動くため 0:00 UTC = 9:00 JST
   schedule:
     - cron: '0 0 * * 1'
-
-  # 手動実行ボタン（テスト時に使う）
   workflow_dispatch:
 
 permissions:
@@ -38,7 +35,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add report.png
-          git commit --trailer "Co-authored-by: Cursor <cursoragent@cursor.com>" -m "Update report" || echo "No changes"
+          git commit -m "Update report" || echo "No changes"
           git push
 
       - name: Wait for CDN propagation
