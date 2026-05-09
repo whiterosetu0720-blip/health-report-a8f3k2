@@ -3,6 +3,7 @@ const { google }   = require('googleapis');
 const fs   = require('fs');
 const path = require('path');
 
+const COL_DATE  = 1;
 const COL_BED   = 3;
 const COL_WAKE  = 4;
 const COL_OVER  = 8;
@@ -20,6 +21,16 @@ async function readSheet() {
     range: 'Sheet1!A:J',
   });
   return res.data.values || [];
+}
+
+function parseSheetDate(val) {
+  if (!val) return null;
+  const s = String(val).trim();
+  const m = s.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+  const d = new Date(s);
+  if (!isNaN(d)) return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return null;
 }
 
 function timeToMin(str) {
@@ -40,7 +51,7 @@ function stddev(vals) {
 function evaluateSleep(rows) {
   const beds  = rows.map(r => timeToMin(r[COL_BED])).filter(v => v !== null);
   const wakes = rows.map(r => timeToMin(r[COL_WAKE])).filter(v => v !== null);
-  if (beds.length < 3) return 'ryoko';
+  if (beds.length < 2) return 'taishogai';
   const maxSd = Math.max(stddev(beds), stddev(wakes));
   if (maxSd <= 30) return 'ryoko';
   if (maxSd <= 60) return 'chui';
@@ -66,11 +77,16 @@ function evaluateOver(rows) {
   return { label, days };
 }
 
-function buildPeriod() {
+function buildPeriod(rows) {
   const DAYS = ['日', '月', '火', '水', '木', '金', '土'];
   const fmt  = d => `${d.getMonth() + 1}/${d.getDate()}（${DAYS[d.getDay()]}）`;
-  const now  = new Date();
-  const end  = new Date(now); end.setDate(now.getDate() - 1);
+  if (rows && rows.length > 0) {
+    const firstDate = parseSheetDate(rows[0][COL_DATE]);
+    const lastDate  = parseSheetDate(rows[rows.length - 1][COL_DATE]);
+    if (firstDate && lastDate) return `${fmt(firstDate)} 〜 ${fmt(lastDate)}`;
+  }
+  const now   = new Date();
+  const end   = new Date(now); end.setDate(now.getDate() - 1);
   const start = new Date(now); start.setDate(now.getDate() - 7);
   return `${fmt(start)} 〜 ${fmt(end)}`;
 }
@@ -90,6 +106,9 @@ function labelText(label) {
 }
 
 function iconHtml(label) {
+  if (label === 'taishogai') {
+    return `<span class="c-icon" style="background:#555;"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></span>`;
+  }
   const cls    = label === 'ryoko' ? 'c-icon-ryoko' : label === 'chui' ? 'c-icon-chui' : 'c-icon-taisaku';
   const stroke = label === 'ryoko' ? '#16a34a' : label === 'chui' ? '#a16207' : '#b91c1c';
   const iconId = label === 'ryoko' ? 'ic-check' : label === 'chui' ? 'ic-excl' : 'ic-cross';
@@ -97,6 +116,7 @@ function iconHtml(label) {
 }
 
 function commentSleep(label) {
+  if (label === 'taishogai') return 'データが不足しているため睡眠リズムの評価ができませんでした。';
   if (label === 'ryoko')   return '睡眠リズムは安定しています。この調子を維持しましょう。';
   if (label === 'chui')    return '就寝・起床時刻のばらつきが見られます。一定のリズムを心がけましょう。';
   if (label === 'taisaku') return '睡眠リズムが大きく乱れています。早急な改善が必要です。';
@@ -118,6 +138,13 @@ function commentOver(label, days) {
 }
 
 (async () => {
+  if (!process.env.GOOGLE_CREDENTIALS) {
+    throw new Error('環境変数 GOOGLE_CREDENTIALS が設定されていません。GitHub Secrets を確認してください。');
+  }
+  if (!process.env.SPREADSHEET_ID) {
+    throw new Error('環境変数 SPREADSHEET_ID が設定されていません。GitHub Secrets を確認してください。');
+  }
+
   console.log('スプレッドシートを読み込んでいます...');
   const allRows = await readSheet();
 
@@ -132,14 +159,15 @@ function commentOver(label, days) {
   const sleepLabel = evaluateSleep(lastRows);
   const { label: relaxLabel, rate: relaxRate } = evaluateRelax(lastRows);
   const { label: overLabel,  days: overDays  } = evaluateOver(lastRows);
-  const period = buildPeriod();
+  const period = buildPeriod(lastRows);
 
   console.log(`評価結果: 睡眠=${sleepLabel}, リラックス=${relaxLabel}(${relaxRate}%), 行動量=${overLabel}(${overDays}日超過)`);
 
   const allLabels = [sleepLabel, relaxLabel, overLabel];
-  const overall   = allLabels.includes('taisaku') ? 'taisaku'
-                  : allLabels.includes('chui')    ? 'chui'
-                  :                                 'ryoko';
+  const evalLabels = allLabels.filter(l => l !== 'taishogai');
+  const overall   = evalLabels.includes('taisaku') ? 'taisaku'
+                  : evalLabels.includes('chui')    ? 'chui'
+                  :                                  'ryoko';
   const overallColor = overall === 'taisaku' ? '#ef4444'
                      : overall === 'chui'    ? '#d97706'
                      :                         '#16a34a';
